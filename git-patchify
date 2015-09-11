@@ -1,0 +1,18 @@
+#!/bin/bash
+set -eu -o pipefail
+
+# git-patchify: Produce a patch-from-nothing for the given directory or .
+#
+# If in a git repo, don't produce a patch with the contents of .git/, just a
+# patch of the workdir. If in a mundane directory, use an empty tempdir to
+# compare against.
+
+if git rev-parse 2>/dev/null;
+then
+  empty_tree="$(git hash-object -t tree /dev/null)"
+  git diff -p "$empty_tree" "${1:-.}"
+else
+  tmp="$(mktemp -d)"
+  git diff -p "$tmp" "${1:-.}"
+  rmdir $tmp
+fi
