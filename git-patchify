@@ -1,5 +1,5 @@
-#!/bin/bash
-set -eu -o pipefail
+#!/bin/sh
+set -eu
 
 # git-patchify: Produce a patch-from-nothing for the given directory or .
 #
@@ -7,8 +7,7 @@ set -eu -o pipefail
 # patch of the workdir. If in a mundane directory, use an empty tempdir to
 # compare against.
 
-if git rev-parse 2>/dev/null;
-then
+if git rev-parse 2>/dev/null; then
   empty_tree="$(git hash-object -t tree /dev/null)"
   git diff -p "$empty_tree" "${1:-.}"
 else
