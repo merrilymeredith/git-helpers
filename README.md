@@ -70,3 +70,13 @@ against a null tree / empty directory?
     @@ -0,0 +1 @@
     +my rad example
 
+### git-bre
+
+Short for "branch edit", a command that I use to quickly open an editor session
+with any files changed in the current branch, relative to its upstream.  For
+example I could hop into an obscure topic branch I've left around and run `git
+bre` to open all the files touched in the branch, or make it `git bre
+--remote`, passing that arg to vim, my `$EDITOR`, to add the files to a running
+vim session.
+
+
