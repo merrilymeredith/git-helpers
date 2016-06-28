@@ -1,8 +1,35 @@
 #!/bin/sh
 set -eu
 
-# git-patchify: Produce a patch-from-nothing for the given directory or .
-#
+case $1 in *help)
+  exec perldoc $0;;
+esac
+
+:<<=cut
+=head1 NAME
+
+git-patchify: Produce a patch-from-nothing for the given directory or .
+
+=head1 SYNOPSIS
+
+  $ echo some junk > a-file
+  $ git patchify
+  diff --git a/./a-file b/./a-file
+  new file mode 100644
+  index 0000000..9638122
+  --- /dev/null
+  +++ b/./a-file
+  @@ -0,0 +1 @@
+  +some junk
+
+=head1 DESCRIPTION
+
+In a git repo or even an untracked directory, generate a diff from nothing at
+all to the current state.  This might be handy for submitting a test case in a
+bug report, when more than one file is necessary.
+
+=cut
+
 # If in a git repo, don't produce a patch with the contents of .git/, just a
 # patch of the workdir. If in a mundane directory, use an empty tempdir to
 # compare against.
