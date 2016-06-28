@@ -1,9 +1,39 @@
 #!/bin/sh
 set -eu
 
-# git-bre:  "branch edit", run $EDITOR with a list of all files touched in this
-# branch compared to upstream.  Any args are passed to the editor, before the
-# file list.
+case $1 in *help)
+  exec perldoc $0;;
+esac
+
+:<<=cut
+=head1 NAME
+
+git-bre -- Open all files touched since upstream
+
+=head1 SYNOPSIS
+
+  ## On master, with an un-pushed commit relative to orgin/master
+  # Opens $EDITOR with all files touched by that commit.
+  ## On a topic branch:
+  # Opens all files touched relative to its upstream. (same as master)
+
+  $ git bre
+
+  ## For vim, at least, opens all files in an existing window.
+
+  $ git bre --remote
+
+=head1 DESCRIPTION
+
+Short for "branch edit", this is a way to open all whole files changed in a
+branch, as opposed to looking at diffs.  It's a quick way to review a branch in
+context or just start an editor session without having saved a session file
+already.
+
+Any args (except help) are passed through to your editor, before the list of
+filenames
+
+=cut
 
 CHANGED=$(
   git diff --name-only @{u}.. | while read file
