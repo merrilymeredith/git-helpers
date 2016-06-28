@@ -8,7 +8,7 @@ esac
 :<<=cut
 =head1 NAME
 
-git-patchify: Produce a patch-from-nothing for the given directory or .
+git-patchify -- Produce a patch-from-nothing for the given directory or cwd
 
 =head1 SYNOPSIS
 
