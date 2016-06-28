@@ -16,7 +16,7 @@ class GitGet
   def run
     if respond_to? cmd
       puts send(cmd, *@args)
-    else 
+    else
       help
     end
   end
@@ -25,7 +25,7 @@ class GitGet
     @cmd  = 'cmd_' + cmd
     @args = args
     @repo = Rugged::Repository.discover
-    @path = Pathname.new @repo.workdir 
+    @path = Pathname.new @repo.workdir
   rescue Rugged::RepositoryError
     STDERR.puts "Could not find a git repository in or above #{Dir.getwd}"
     exit 1
