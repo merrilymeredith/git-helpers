@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-case $1 in *help)
+case ${1:-} in *help)
   exec perldoc $0;;
 esac
 
