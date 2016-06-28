@@ -5,6 +5,15 @@ case ${1:-} in *help)
   exec perldoc $0;;
 esac
 
+CHANGED=$(
+  git diff --name-only @{u}.. | while read file
+  do
+    printf "\'$file\' "
+  done
+)
+
+eval "exec $EDITOR $@ ${CHANGED:?[No files to edit]}"
+
 :<<=cut
 =head1 NAME
 
@@ -34,12 +43,3 @@ Any args (except help) are passed through to your editor, before the list of
 filenames
 
 =cut
-
-CHANGED=$(
-  git diff --name-only @{u}.. | while read file
-  do
-    printf "\'$file\' "
-  done
-)
-
-eval "exec $EDITOR $@ ${CHANGED:?[No files to edit]}"
