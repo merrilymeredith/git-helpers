@@ -3,6 +3,11 @@ git-helpers
 
 git stuff that doesn't fit in aliases 💖
 
+### git-ctags
+
+Helps me run ctags on all tracked files, including as a hook when updating my 
+repository.
+
 ### git-patchify
 
 This came from a discussion of how to post a test case in a GitHub issue that
