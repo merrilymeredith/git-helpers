@@ -2,7 +2,7 @@
 set -eu
 
 case ${1:-} in *help)
-  exec perldoc $0;;
+  exec perldoc -T $0;;
 esac
 
 # If in a git repo, don't produce a patch with the contents of .git/, just a

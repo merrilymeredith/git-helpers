@@ -2,7 +2,7 @@
 set -eu
 
 case ${1:-} in *help)
-  exec perldoc $0;;
+  exec perldoc -T $0;;
 esac
 
 CHANGED=$(
