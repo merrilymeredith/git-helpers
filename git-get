@@ -5,9 +5,13 @@
 #
 # https://github.com/mjdominus/git-util/blob/master/git-get
 
-# $gem install rugged
-require 'rugged'
 require 'pathname'
+require 'bundler/inline'
+
+gemfile do
+  source 'https://rubygems.org'
+  gem 'rugged'
+end
 
 class GitGet
   attr_reader :cmd, :args, :repo
