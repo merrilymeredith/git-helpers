@@ -26,13 +26,14 @@ opts   = File.exists?(conf) ? "--options=#{conf}" : ''
 
 if running_hook
   fork and exit
+  [STDIN, STDOUT, STDERR].each {|p| p.reopen '/dev/null'}
   sleep 5
 end
 
 open(target, File::RDONLY|File::CREAT, 0644) do |f|
   if running_hook
     exit unless f.flock(File::LOCK_EX|File::LOCK_NB)
-    exit unless (Time.now - f.mtime) > 60
+    exit unless f.size == 0 || (Time.now - f.mtime) > 60
   end
 
   system(<<-CMD) or exit $?.exitstatus
@@ -53,7 +54,8 @@ git-ctags - run ctags on git tracked files
 
  git ctags
 
- echo 'git ctags hook 2>/dev/null' >> .git/hooks/post-checkout
+ echo 'git ctags hook 2>/dev/null' >> .git/hooks/post-checkout &&
+   chmod +x $_
 
  git checkout some/branch
  CTAGS_SKIP=1 git checkout some/branch
