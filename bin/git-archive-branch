@@ -1,0 +1,11 @@
+#!/bin/bash
+set -eu -o pipefail
+
+BRANCH=${1:?"Usage: $0 BRANCH"}
+
+MESSAGE="Archive refs/heads/${BRANCH}"
+TAG="old.${BRANCH//\//.}"
+
+set -x
+git tag -s -m "$MESSAGE" $TAG $BRANCH
+git branch -D $BRANCH

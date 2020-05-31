@@ -3,10 +3,28 @@ git-helpers
 
 git stuff that doesn't fit in aliases 💖
 
+### git-attic
+
+Lists deleted files by walking back through `git log`
+
+### git-histedit
+
+`histedit` lets you edit the current branch using interactive rebase, but
+without actually *moving* the fork point of your branch, avoiding the
+complications of fixing up your history and dealing with merge conflicts at
+the same time.
+
+See also: `hg histedit`
+
+### git-archive-branch
+
+Converts an unmerged branch to a tag with "old." prefixed, because I'm afraid
+to delete things but want them out of sight.
+
 ### git-ctags
 
-Helps me run ctags on all tracked files, including as a hook when updating my 
-repository.
+Helps me run ctags on all tracked files, including as a hook when updating my
+repository.  Waits a bit to only rerun once in a series of operations.
 
 ### git-patchify
 
@@ -14,7 +32,6 @@ This came from a discussion of how to post a test case in a GitHub issue that
 requires a few files.  Tar and shar came up but they were a little too noisy
 for someone to glance at.  Instead, how about leveraging git's diff engine
 against a null tree / empty directory?
-
 
     ❯ mkdir blah && echo "my rad example" > blah/example.txt
     ❯ git patchify blah
@@ -39,7 +56,7 @@ vim session.
 
 Fetches some perhaps-useful info about the git repository.  This was written as
 a personal curiosity after seeing mjd's version and how convoluted coding
-against the "plumbing" felt to me.  Instead, this git-get leverages the Rugged
+against the "plumbing" felt to me.  Instead, this git-get uses the `Rugged`
 ruby gem.
 
     git get usage:
