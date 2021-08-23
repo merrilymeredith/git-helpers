@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
-# frozen_string_literals: true
+# frozen_string_literal: true
 
 # This is a work-similar to mjd's git-util/git-get that I quickly wrote up to
 # see how much less painful it would all be if you skip the CLI "plumbing".
@@ -12,24 +12,115 @@ require 'bundler/inline'
 gemfile do
   source 'https://rubygems.org'
   gem 'git'
+  gem 'thor'
 end
 
-class GitGet
-  attr_reader :cmd, :args
-  @@desc = {}
-
-  def initialize (cmd = 'help', *args)
-    @cmd  = 'cmd_' + cmd
-    @args = args
+class GitGet < Thor
+  def self.exit_on_failure?
+    true
   end
 
-  def run
-    if respond_to? cmd
-      puts send(cmd, *@args)
-    else
-      help
+  no_commands do
+    def invoke_command(command, *args)
+      puts super(command, *args)
     end
   end
+
+  desc 'repo-abs', 'repository workdir path'
+  def repo_abs
+    path
+  end
+
+  desc 'repo-rel', 'repository workdir path as relative to cwd'
+  def root_rel
+    path.relative_path_from(Pathname.getwd)
+  end
+
+  desc 'cwd-rel', 'cwd path as relative to workdir'
+  def cwd_rel
+    Pathname.getwd
+            .relative_path_from(path)
+  end
+
+  desc 'is-head-detached', 'exit 0 if detached head'
+  def is_head_detached
+    repo.current_branch
+        .then {repo.is_branch? _1}
+        .then(&method(:exit_with_status))
+  end
+
+  desc 'branch', 'short refname of current branch'
+  def branch
+    repo.current_branch
+  end
+
+  desc 'branch-config', 'fetch config value for specified branch and key'
+  def branch_config(branch = self.branch, key)
+    repo.config["branch.#{branch}.#{key}"]
+  end
+
+  desc 'branch-remote', 'remote for this branch or specified branch'
+  def branch_remote(branch = self.branch)
+    branch_config branch, 'remote'
+  end
+
+  desc 'branch-tracking', 'remote tracking for this branch or specified branch'
+  def branch_tracking(branch = self.branch)
+    remote     = branch_remote(branch)
+    remote_ref = branch_config(branch, 'merge').split('/', 3)[-1]
+    exit 1 unless remote && remote_ref
+
+    if remote == '.'
+      remote_ref
+    else
+      "#{remote}/#{remote_ref}"
+    end
+  end
+
+  desc 'is-working-tree-clean', 'exit 0 if working tree is clean'
+  def is_working_tree_clean
+    repo.status
+        .reject(&:untracked)
+        .none?
+        .then(&method(:exit_with_status))
+  end
+
+  desc 'heads', 'bare list of local branches'
+  def heads
+    repo.branches
+        .local
+        .map(&:name)
+        .join("\n")
+  end
+
+  desc 'is-remote', 'exit 0 if specified remote exists'
+  def is_remote(name)
+    repo.remotes
+        .any? { |r| r.name == name }
+        .then(&method(:exit_with_status))
+  end
+
+  desc 'is-ancestor-of', 'exit 0 if 1st ref is ancestor to all following'
+  def is_ancestor_of(*revs)
+    revs.map { repo.revparse _1 }
+        .then {repo.merge_base(*_1).first.sha == _1[0]}
+        .then(&method(:exit_with_status))
+  end
+
+  desc 'is-same-object', 'exit 0 if specified refs are the same object'
+  def is_same_object(*revs)
+    revs.map { repo.revparse _1 }
+        .uniq
+        .count
+        .then(&method(:exit_with_status))
+  end
+
+  desc 'config-keys', 'all config keys matching specified pattern (or just all)'
+  def config_keys(pat = /./)
+    repo.config.each_key.grep(pat).join("\n")
+  end
+
+  private
 
   def repo
     @repo ||= Git.open(Dir.getwd)
@@ -41,130 +132,10 @@ class GitGet
     @path ||= Pathname(repo.dir.to_s)
   end
 
-
-  def help
-    puts "git get usage:\n"
-
-    self.methods
-      .map(&:to_s)
-      .map {|m| m.match(/^cmd_(\w+)/)}
-      .compact
-      .each do |m|
-        cmd_name = m[1]
-
-        puts " " + cmd_name
-        if desc = @@desc[cmd_name]
-          puts "   " + desc
-        end
-        puts ""
-      end
-    exit 2
-  end
-
-
-  @@desc['root'] = "repository workdir path"
-  def cmd_root
-    path
-  end
-
-  @@desc['root_rel'] = "repository workdir path as relative to cwd"
-  def cmd_root_rel
-    path.relative_path_from( Pathname.getwd )
-  end
-
-  @@desc['cwd_rel'] = "cwd path as relative to workdir"
-  def cmd_cwd_rel
-    Pathname.getwd().relative_path_from( path )
-  end
-
-
-  @@desc['is_head_detached'] = "exit 0 if detached head"
-  def cmd_is_head_detached
-    repo.current_branch
-        .then {repo.is_branch? _1}
-        .then(&method(:exit_with_status))
-  end
-
-
-  @@desc['branch'] = "short refname of current branch"
-  def cmd_branch
-    repo.current_branch
-  end
-
-  @@desc['branch_config'] = "fetch config value for specified branch and key"
-  def cmd_branch_config (branch = cmd_branch, key)
-    repo.config["branch.#{branch}.#{key}"]
-  end
-
-  @@desc['branch_remote'] = "remote for this branch or specified branch"
-  def cmd_branch_remote (branch = cmd_branch)
-    cmd_branch_config branch, 'remote'
-  end
-
-  @@desc['branch_tracking'] = "remote tracking for this branch or specified branch"
-  def cmd_branch_tracking (branch = cmd_branch)
-    remote     = cmd_branch_remote(branch)
-    remote_ref = cmd_branch_config(branch, 'merge').split(/\// ,3)[-1]
-    exit 1 unless remote && remote_ref
-
-    if remote == '.'
-      remote_ref
-    else
-      remote + '/' + remote_ref
-    end
-  end
-
-
-  @@desc['is_working_tree_clean'] = "exit 0 if working tree is clean"
-  def cmd_is_working_tree_clean
-    repo.status
-      .reject {|f| f.untracked}
-      .none?
-      .then(&method(:exit_with_status))
-  end
-
-
-  @@desc['heads'] = "bare list of local branches"
-  def cmd_heads
-    repo.branches
-        .local
-        .map(&:name)
-        .join("\n")
-  end
-
-  @@desc['is_remote'] = "exit 0 if specified remote exists"
-  def cmd_is_remote (name)
-    repo.remotes
-        .any? {|r| r.name == name}
-        .then(&method(:exit_with_status))
-  end
-
-  @@desc['is_ancestor_of'] = "exit 0 if 1st ref is ancestor to all following"
-  def cmd_is_ancestor_of (*revs)
-    revs.map {repo.revparse _1}
-        .then {repo.merge_base(*_1).first.sha == _1[0]}
-        .then(&method(:exit_with_status))
-  end
-
-  @@desc['is_same_object'] = "exit 0 if specified refs are the same object"
-  def cmd_is_same_object (*revs)
-    revs.map {repo.revparse _1}
-        .uniq
-        .count
-        .then(&method(:exit_with_status))
-  end
-
-  @@desc['config_keys'] = "all config keys matching specified pattern (or just all)"
-  def cmd_config_keys (pat = /./)
-    repo.config.each_key.select {|k| k.match pat}.join("\n")
-  end
-
-  private
-
   def exit_with_status(bool)
     exit bool ? 0 : 1
   end
 end
 
-GitGet.new(*ARGV).run
+GitGet.start(ARGV)
 
