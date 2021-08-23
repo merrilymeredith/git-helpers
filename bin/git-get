@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+# frozen_string_literals: true
 
 # This is a work-similar to mjd's git-util/git-get that I quickly wrote up to
 # see how much less painful it would all be if you skip the CLI "plumbing".
@@ -10,12 +11,17 @@ require 'bundler/inline'
 
 gemfile do
   source 'https://rubygems.org'
-  gem 'rugged'
+  gem 'git'
 end
 
 class GitGet
-  attr_reader :cmd, :args, :repo
+  attr_reader :cmd, :args
   @@desc = {}
+
+  def initialize (cmd = 'help', *args)
+    @cmd  = 'cmd_' + cmd
+    @args = args
+  end
 
   def run
     if respond_to? cmd
@@ -25,14 +31,14 @@ class GitGet
     end
   end
 
-  def initialize (cmd = 'help', *args)
-    @cmd  = 'cmd_' + cmd
-    @args = args
-    @repo = Rugged::Repository.discover
-    @path = Pathname.new @repo.workdir
-  rescue Rugged::RepositoryError
-    STDERR.puts "Could not find a git repository in or above #{Dir.getwd}"
-    exit 1
+  def repo
+    @repo ||= Git.open(Dir.getwd)
+  rescue ArgumentError
+    abort "Could not find a git repository in or above #{Dir.getwd}"
+  end
+
+  def path
+    @path ||= Pathname(repo.dir.to_s)
   end
 
 
@@ -58,34 +64,36 @@ class GitGet
 
   @@desc['root'] = "repository workdir path"
   def cmd_root
-    @path
+    path
   end
 
   @@desc['root_rel'] = "repository workdir path as relative to cwd"
   def cmd_root_rel
-    @path.relative_path_from( Pathname.getwd )
+    path.relative_path_from( Pathname.getwd )
   end
 
   @@desc['cwd_rel'] = "cwd path as relative to workdir"
   def cmd_cwd_rel
-    Pathname.getwd().relative_path_from( @path )
+    Pathname.getwd().relative_path_from( path )
   end
 
 
   @@desc['is_head_detached'] = "exit 0 if detached head"
   def cmd_is_head_detached
-    exit @repo.head_detached? ? 0 : 1
+    repo.current_branch
+        .then {repo.is_branch? _1}
+        .then(&method(:exit_with_status))
   end
 
 
   @@desc['branch'] = "short refname of current branch"
   def cmd_branch
-    @repo.head.name.split(/\//, 3)[-1]
+    repo.current_branch
   end
 
   @@desc['branch_config'] = "fetch config value for specified branch and key"
   def cmd_branch_config (branch = cmd_branch, key)
-    @repo.config["branch.#{branch}.#{key}"]
+    repo.config["branch.#{branch}.#{key}"]
   end
 
   @@desc['branch_remote'] = "remote for this branch or specified branch"
@@ -107,44 +115,55 @@ class GitGet
   end
 
 
+  @@desc['is_working_tree_clean'] = "exit 0 if working tree is clean"
   def cmd_is_working_tree_clean
-    raise "NYI"
-    # need to confirm what all mjd's commands there do first!
+    repo.status
+      .reject {|f| f.untracked}
+      .none?
+      .then(&method(:exit_with_status))
   end
 
 
   @@desc['heads'] = "bare list of local branches"
   def cmd_heads
-    @repo.refs
-      .select(&:branch?)
-      .map(&:name)
-      .map {|n| n.split(/\//, 3)[-1]}
-      .to_a.join("\n")
+    repo.branches
+        .local
+        .map(&:name)
+        .join("\n")
   end
 
   @@desc['is_remote'] = "exit 0 if specified remote exists"
   def cmd_is_remote (name)
-    exit @repo.remotes[name] ? 0 : 1
+    repo.remotes
+        .any? {|r| r.name == name}
+        .then(&method(:exit_with_status))
   end
 
   @@desc['is_ancestor_of'] = "exit 0 if 1st ref is ancestor to all following"
   def cmd_is_ancestor_of (*revs)
-    (a, *b) = revs.map {|rev| @repo.rev_parse rev}
-    # Rugged docs claim I get a Rugged::Object but it's just a string SHA!
-    exit a.oid == @repo.merge_base(a, *b) ? 0 : 1
+    revs.map {repo.revparse _1}
+        .then {repo.merge_base(*_1).first.sha == _1[0]}
+        .then(&method(:exit_with_status))
   end
 
   @@desc['is_same_object'] = "exit 0 if specified refs are the same object"
   def cmd_is_same_object (*revs)
-    (a, *b) = revs.map {|rev| @repo.rev_parse rev}
-    exit b.all? {|o| o == a} ? 0 : 1
+    revs.map {repo.revparse _1}
+        .uniq
+        .count
+        .then(&method(:exit_with_status))
   end
 
   @@desc['config_keys'] = "all config keys matching specified pattern (or just all)"
   def cmd_config_keys (pat = /./)
-    @repo.config.each_key.select {|k| k.match pat}.join("\n")
+    repo.config.each_key.select {|k| k.match pat}.join("\n")
   end
 
+  private
+
+  def exit_with_status(bool)
+    exit bool ? 0 : 1
+  end
 end
 
 GitGet.new(*ARGV).run
