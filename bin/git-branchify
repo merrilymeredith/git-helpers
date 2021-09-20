@@ -1,0 +1,9 @@
+#!/bin/bash
+set -euo pipefail
+
+NEW="$1"
+ORIG="$(git branch --show-current)"
+
+set -x
+git switch -c "$NEW"
+git branch -f "$ORIG" "$ORIG@{u}"
