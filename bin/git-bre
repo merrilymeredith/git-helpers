@@ -12,6 +12,7 @@ CHANGED=$(
   done
 )
 
+cd "$(git rev-parse --show-toplevel)"
 eval "exec $EDITOR $@ ${CHANGED:?[No files to edit]}"
 
 :<<=cut
