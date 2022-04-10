@@ -6,7 +6,7 @@ case ${1:-} in *help)
 esac
 
 CHANGED=$(
-  git diff --name-only @{u}.. | while read file
+  git diff --name-only @{u}... | while read file
   do
     printf "\'$file\' "
   done
