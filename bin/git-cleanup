@@ -1,19 +1,31 @@
-#!/bin/sh
-set -eu
+#!/bin/bash
+set -eu -f
+
+tasks=()
 
 # For each local branch that isn't checked out, on a worktree, or a main/master
 # suffix
-set -f
 for branch in $(git branch -l | grep -v '^+\|^*\|\<\(master\|main\)\>'); do
   # If there are no commits on this branch that cherry thinks are not in its
   # upstream
   if ! git log --oneline --cherry ${branch}@{u}...$branch | grep -q '^+'; then
-    echo "git branch -D $branch"
+    tasks+=("git branch -D $branch")
 
     # If a matching origin branch exists, we assume there's nothing unique on
     # it if the local one is merged
     if git rev-parse origin/${branch} >/dev/null 2>/dev/null; then
-      echo "git push origin :$branch"
+      tasks+=("git push -d origin $branch")
     fi
   fi
+done
+
+printf "%s\n" "${tasks[@]}" ""
+
+[ -t 1 ] || exit 0
+
+read -p ">>> Run these commands? " -n 2
+[[ $REPLY =~ ^[Yy]$ ]] || exit; echo
+
+for task in "${tasks[@]}"; do
+  ( set -x; $task )
 done
