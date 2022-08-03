@@ -5,7 +5,7 @@ tasks=()
 
 # For each local branch that isn't checked out, on a worktree, or a main/master
 # suffix
-for branch in $(git branch -l | grep -v '^+\|^*\|\<\(master\|main\)\>'); do
+for branch in $(git branch -l | grep -v '^+\|^*\|\<\(master\|main\|releases\)\>'); do
   # If there are no commits on this branch that cherry thinks are not in its
   # upstream
   if ! git log --oneline --cherry ${branch}@{u}...$branch | grep -q '^+'; then
